@@ -59,21 +59,6 @@ def get_system_info():
         f"👤 Пользователь: {os.getlogin()}"
     )
 
-# Отправка уведомления о запуске
-async def send_startup_notification():
-    try:
-        app = Application.builder().token(TOKEN).build()
-        await app.initialize()
-        for user_id in AUTHORIZED_USERS:
-            await app.bot.send_message(
-                chat_id=user_id,
-                text=f"✅ Система запущена!\n{get_system_info()}",
-                reply_markup=ReplyKeyboardMarkup(COMMAND_KEYBOARD, resize_keyboard=True)
-            )
-        await app.shutdown()
-    except Exception as e:
-        logger.error(f"Ошибка отправки уведомления: {str(e)}")
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.id not in AUTHORIZED_USERS:
         await update.message.reply_text("🚫 Доступ запрещен.")
@@ -271,11 +256,10 @@ def main() -> None:
     logger.info(f"Скрипт запущен из: {os.path.abspath(__file__)}")
     
     try:
-        # Отправляем уведомление о запуске
-        asyncio.run(send_startup_notification())
-        
+        # Создаем приложение бота
         app = Application.builder().token(TOKEN).build()
         
+        # Добавляем обработчики команд
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("help", start))
         app.add_handler(CommandHandler("screenshot", take_screenshot))
@@ -321,6 +305,22 @@ def main() -> None:
         app.add_handler(key_handler)
         app.add_handler(hotkey_handler)
         app.add_handler(delete_handler)
+        
+        # Функция для отправки уведомления при запуске
+        async def send_startup_message(application: Application):
+            for user_id in AUTHORIZED_USERS:
+                try:
+                    await application.bot.send_message(
+                        chat_id=user_id,
+                        text=f"🖥️ Компьютер включен!\n{get_system_info()}",
+                        reply_markup=ReplyKeyboardMarkup(COMMAND_KEYBOARD, resize_keyboard=True)
+                    )
+                    logger.info(f"Уведомление о запуске отправлено пользователю {user_id}")
+                except Exception as e:
+                    logger.error(f"Ошибка отправки уведомления: {str(e)}")
+        
+        # Регистрируем функцию для выполнения после инициализации
+        app.post_init(send_startup_message)
         
         logger.info("Бот запускается...")
         app.run_polling()
